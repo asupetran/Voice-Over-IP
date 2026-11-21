@@ -25,8 +25,18 @@ try:
         except TimeoutError:
             continue
         print(f'Connected with {address[0]}:{address[1]}')
-        conn.close()
+        conn.close() # Instead store the connection here, close only when client disconnects
 except KeyboardInterrupt:
     print('\nShutting down server')
 finally:
     soc.close()
+
+# Server allocates a range of ports
+
+# Client connects to server -> server assigns a port to client automatically
+
+# Client receives a list of connected clients to the server and has an option to "call" another client
+
+# Server transmits packets/data between connected clients only
+
+# function that listens to 
