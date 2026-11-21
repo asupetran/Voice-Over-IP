@@ -1,29 +1,32 @@
 import socket
 import sys
 
-HOST = '127.0.0.1'
+HOST = ''    # '' = listen on all interfaces
 PORT = 5789
 
-soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
 try:
-    soc.bind((HOST, PORT))
+    # Dual-stack socket: accepts both IPv4 (127.0.0.1) and IPv6 (::1) clients
+    soc = socket.create_server((HOST, PORT), family=socket.AF_INET6,
+                               dualstack_ipv6=True, backlog=9)
+except OSError as e:
+    print(f'Bind failed. Error Code: {e.errno} Message: {e.strerror}')
+    sys.exit(1)
 
-except socket.error as message:
-    print('Bind failed. Error Code : '
-        + str(message[0]) + ' Message '
-        + message[1])
-    sys.exit()
+print(f'Server listening on port {PORT} (IPv4 + IPv6). Press Ctrl+C to stop.')
 
-print('Socket binding operation completed')
+# Wakeup once a second to allow KeyboardInterrupt
+soc.settimeout(1.0)
 
-soc.listen(9)
-
-conn, address = soc.accept()
-print('Connected with ' + address[0] + ':'
-      + str(address[1]))
-
-# hostname = socket.gethostname()
-# ip = socket.gethostbyname(hostname)
-# print(f'Hostname: {hostname}')
-# print(f'IP: {ip}')
+# Keep server running until KeyboardInterrupt
+try:
+    while True:
+        try:
+            conn, address = soc.accept()
+        except TimeoutError:
+            continue
+        print(f'Connected with {address[0]}:{address[1]}')
+        conn.close()
+except KeyboardInterrupt:
+    print('\nShutting down server')
+finally:
+    soc.close()
