@@ -4,7 +4,10 @@ import json
 import threading
 
 HOST = ''    # '' = listen on all interfaces
-PORT = 5789
+PORT = 5789 # Server port
+
+PORT_MIX = 49152
+PORT_MAX = 49160    # The range for the client ports, will be used for allocation
 
 clients = {}    # client_id -> {"username": ..., "conn": ...}
 clients_lock = threading.Lock()     # Threads share `clients`, so protect it
@@ -17,8 +20,15 @@ def build_client_list(my_id):
         return [{"username": c["username"], "id": cid}
                 for cid, c in clients.items() if cid != my_id]
 
+def allocate_port(): # Work in progress
+    """Call this while holding clients_lock."""
+    for p in range(PORT_MIN, PORT_MAX + 1):
+        if p not in clients:
+            return p
+    return None
+
 def handle_client(conn, address):
-    client_id = address[1]      # The client's port is the id
+    client_id = address[1]      # The client's port is currently the ID, will adjust so that ports are allocated
     reader = conn.makefile("r") # Lets us read one line at a time
     try:
         send_msg(conn, {"type": "connect", "status": "successful"})
@@ -47,7 +57,7 @@ def handle_client(conn, address):
         with clients_lock:
             clients.pop(client_id, None)
         conn.close()
-        print(f'Disconnected {address[0]}: {client_id}')
+        print(f'Disconnected with {msg["username"]} {address[0]}: {client_id}')
 
 
 try:
@@ -71,18 +81,8 @@ try:
         except TimeoutError:
             continue
         print(f'Connected with {address[0]}:{address[1]}')
-        conn.close() # Instead store the connection here, close only when client disconnects
+        threading.Thread(target=handle_client, args=(conn, address), daemon=True).start()
 except KeyboardInterrupt:
     print('\nShutting down server')
 finally:
     soc.close()
-
-# Server allocates a range of ports
-
-# Client connects to server -> server assigns a port to client automatically
-
-# Client receives a list of connected clients to the server and has an option to "call" another client
-
-# Server transmits packets/data between connected clients only
-
-# function that listens to 
