@@ -1,6 +1,6 @@
+import json
 import socket
 import sys
-import json
 import threading
 
 HOST = ''    # '' = listen on all interfaces
@@ -65,7 +65,7 @@ def handle_client(conn, address):
         if error:
             send_error(conn, error)
             return
-        
+
         print(f'Registered {username} as {client_id}' )
         send_msg(conn, {"type": "welcome", "client_id": client_id})
         broadcast_client_list()
